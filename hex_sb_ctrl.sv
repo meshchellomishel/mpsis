@@ -46,8 +46,24 @@ hex_digits hex_digits(
 );
 
 always_ff @(posedge clk_i) begin
+    if (!write_enable_i && req_i) begin
+        case (addr_i)
+        HEX0: read_data_o <= hex0;
+        HEX1: read_data_o <= hex1;
+        HEX2: read_data_o <= hex2;
+        HEX3: read_data_o <= hex3;
+        HEX4: read_data_o <= hex4;
+        HEX5: read_data_o <= hex5;
+        HEX6: read_data_o <= hex6;
+        HEX7: read_data_o <= hex7;
+        BITM: read_data_o <= bitmask;
+        endcase
+    end
+end
+
+always_ff @(posedge clk_i) begin
     if (write_enable_i && req_i) begin
-        case (addr_i[23:0])
+        case (addr_i)
         HEX0: hex0 <= write_data_i;
         HEX1: hex1 <= write_data_i;
         HEX2: hex2 <= write_data_i;
