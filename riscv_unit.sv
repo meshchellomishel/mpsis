@@ -19,9 +19,12 @@ module riscv_unit(
 );
 
 logic stall;
+
+/* INSTR MEMORY */
 logic [31:0] im_instr;
 logic [31:0] im_instr_addr;
 
+/* DATA MEMORY */
 logic [31:0] dm_mem_rd;
 logic [31:0] dm_mem_wd;
 logic [31:0] dm_mem_addr;
@@ -31,6 +34,7 @@ logic dm_ready;
 logic dm_mem_req;
 logic dm_mem_we;
 
+/* CORE */
 logic [31:0] core_mem_rd;
 logic [31:0] core_mem_wd;
 logic [31:0] core_mem_addr;
@@ -41,36 +45,21 @@ logic core_mem_we;
 logic irq_req;
 logic irq_ret;
 
+/* DEVICES */
 logic [7:0] device_code;
-assign device_code = core_mem_addr[31:24];
-
+logic [255:0] req_sel;
 logic lsu_req;
 logic ps2_req;
 logic hex_req;
-
-always_comb begin
-    lsu_req = 'b0;
-    ps2_req = 'b0;
-    hex_req = 'b0;
-    if (core_mem_req) begin
-        case (device_code)
-        'h4: hex_req = 'b1;
-        'h3: ps2_req = 'b1;
-        'h0: lsu_req = 'b1;
-        endcase
-    end
-end
 
 logic [ 31:0] lsu_mem_rd;
 logic [ 31:0] hex_mem_rd;
 logic [ 31:0] ps2_mem_rd;
 
-always_comb begin
-    if (ps2_req) core_mem_rd = ps2_mem_rd;
-    else if (hex_req) core_mem_rd = hex_mem_rd;
-    else core_mem_rd = lsu_mem_rd;
-end
+logic [ 31:0] ps2_addr;
+logic [ 31:0] hex_addr;
 
+/* RST TRANSFER */
 logic sysclk, rst;
 sys_clk_rst_gen divider(
     .ex_clk_i(clk_i),
@@ -79,6 +68,22 @@ sys_clk_rst_gen divider(
     .sys_clk_o(sysclk),
     .sys_reset_o(rst)
 );
+
+assign device_code = core_mem_addr[31:24];
+assign req_sel = 'b1 << device_code;
+
+assign hex_req = req_sel['h4] & core_mem_req;
+assign ps2_req = req_sel['h3] & core_mem_req;
+assign lsu_req = core_mem_req;
+
+assign ps2_addr = core_mem_addr[23:0];
+assign hex_addr = core_mem_addr[23:0];
+
+always_comb begin
+    if (ps2_req) core_mem_rd = ps2_mem_rd;
+    else if (hex_req) core_mem_rd = hex_mem_rd;
+    else core_mem_rd = lsu_mem_rd;
+end
 
 instr_mem instr_mem(
     .addr_i         (im_instr_addr),
@@ -100,7 +105,7 @@ ext_mem data_mem(
 
 hex_sb_ctrl hex_sb_ctrl(
     .clk_i              (sysclk),
-    .addr_i             (core_mem_addr),
+    .addr_i             (hex_addr),
     .req_i              (hex_req),
     .write_data_i       (core_mem_wd),
     .write_enable_i     (core_mem_we),
@@ -114,7 +119,7 @@ ps2_sb_ctrl ps2_sb_ctrl(
     .clk_i              (sysclk),
     .rst_i              (rst),
   
-    .addr_i             (core_mem_addr),
+    .addr_i             (ps2_addr),
     .req_i              (ps2_req),
     .write_data_i       (core_mem_wd),
     .write_enable_i     (core_mem_we),
@@ -166,4 +171,4 @@ riscv_core core(
     .irq_ret_o      (irq_ret)
 );
 
-endmodule;
+endmodule
