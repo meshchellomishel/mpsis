@@ -18,6 +18,7 @@ module ps2_sb_ctrl(
 logic [7:0] scan_code;
 logic       scan_code_is_unread;
 
+
 logic [7:0] keycode;
 logic       keycode_valid;
 
@@ -33,28 +34,18 @@ PS2Receiver ps2receiver(
 assign interrupt_request_o = scan_code_is_unread;
 
 always_ff @(posedge clk_i) begin
+    if (rst_i) scan_code_is_unread <= 'b0;
+    else if (interrupt_return_i) scan_code_is_unread = keycode_valid ? 1'b1 : 1'b0;
+
+    if (req_i) begin
+        scan_code_is_unread <= 1'b0;
+    end
+
     if (keycode_valid == 'd1) begin
         scan_code <= keycode;
         scan_code_is_unread <= 1'b1;
     end
-end
-
-always_ff @(posedge clk_i) begin
-    if (req_i && !write_enable_i) begin
-        case (addr_i[23:0])
-        'h0: begin
-            read_data_o <= scan_code;
-            scan_code_is_unread <= keycode_valid ? 1'b1 : 1'b0;
-        end
-        'h4: begin
-            read_data_o <= scan_code_is_unread;
-        end
-        endcase
-    end
-end
-
-always_ff @(posedge clk_i or posedge rst_i) begin
-    if (rst_i) scan_code_is_unread <= 'b0;
+    
     if (req_i && write_enable_i) begin
         case (addr_i)
         'h24: begin
@@ -67,9 +58,16 @@ always_ff @(posedge clk_i or posedge rst_i) begin
     end
 end
 
-always_comb begin
-    if (interrupt_return_i) begin
-        scan_code_is_unread = keycode_valid ? 1'b1 : 1'b0;
+always_ff @(posedge clk_i) begin
+    if (req_i && !write_enable_i) begin
+        case (addr_i)
+        'h0: begin
+            read_data_o <= scan_code;
+        end
+        'h4: begin
+            read_data_o <= scan_code_is_unread;
+        end
+        endcase
     end
 end
 
