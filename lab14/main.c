@@ -1,120 +1,144 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include "platform.h"
 
 
-#define PS_UP 0xF0
-#define PS_0  0x45
-#define PS_1  0x16
-#define PS_2  0x1E
-#define PS_3  0x26
-#define PS_4  0x25
-#define PS_5  0x2E
-#define PS_6  0x36
-#define PS_7  0x3D
-#define PS_8  0x3E
-#define PS_9  0x46
-#define PS_A  0x1C
-#define PS_B  0x32
-#define PS_C  0x21
-#define PS_D  0x23
-#define PS_E  0x24
-#define PS_F  0x2B
+#define KC_UP 0xF0
+#define KC_0  0x45
+#define KC_1  0x16
+#define KC_2  0x1E
+#define KC_3  0x26
+#define KC_4  0x25
+#define KC_5  0x2E
+#define KC_6  0x36
+#define KC_7  0x3D
+#define KC_8  0x3E
+#define KC_9  0x46
+#define KC_A  0x1C
+#define KC_B  0x32
+#define KC_C  0x21
+#define KC_D  0x23
+#define KC_E  0x24
+#define KC_F  0x2B
 
-#define PS_SP 0x29
-#define PS_EN 0x5A
+#define KC_SP 0x29
+#define KC_EN 0x5A
 
-#define PS_STEP  1
-#define PS_MAX   9
+#define KC_STEP  1
+#define KCS_MAX   9
 
 
 int res = 0, i_ps = 0;
+bool is_up = false;
 
 void int_handler()
 {
     if (!ps2_ptr->unread_data)
         return;
 
+	bool need_calc = false;
     uint32_t in = ps2_ptr->scan_code;
 
-    if (i_ps == PS_MAX)
-        goto calc;
+	if (is_up) {
+		is_up = false;
+		return;
+	}
+
+	if (i_ps == KCS_MAX)
+		need_calc = true;
     
     switch(in) {
-        case PS_SP:
+        case KC_SP:
             res = 0;
             i_ps = 0;
             break;
-        case PS_0:
-            res = res*10;
-            i_ps += PS_STEP;
+        case KC_0:
+            res = res*16;
+            i_ps += KC_STEP;
             break;
-        case PS_1:
-            res = res*10 + 1;
-            i_ps += PS_STEP;
+        case KC_1:
+            res = res*16 + 1;
+            i_ps += KC_STEP;
             break;
-        case PS_2:
-            res = res*10 + 2;
-            i_ps += PS_STEP;
+        case KC_2:
+            res = res*16 + 2;
+            i_ps += KC_STEP;
             break;
-        case PS_3:
-            res = res*10 + 3;
-            i_ps += PS_STEP;
+        case KC_3:
+            res = res*16 + 3;
+            i_ps += KC_STEP;
             break;
-        case PS_4:
-            res = res*10 + 4;
-            i_ps += PS_STEP;
+        case KC_4:
+            res = res*16 + 4;
+            i_ps += KC_STEP;
             break;
-        case PS_5:
-            res = res*10 + 5;
-            i_ps += PS_STEP;
+        case KC_5:
+            res = res*16 + 5;
+            i_ps += KC_STEP;
             break;
-        case PS_6:
-            res = res*10 + 6;
-            i_ps += PS_STEP;
+        case KC_6:
+            res = res*16 + 6;
+            i_ps += KC_STEP;
             break;
-        case PS_7:
-            res = res*10 + 7;
-            i_ps += PS_STEP;
+        case KC_7:
+            res = res*16 + 7;
+            i_ps += KC_STEP;
             break;
-        case PS_8:
-            res = res*10 + 8;
-            i_ps += PS_STEP;
+        case KC_8:
+            res = res*16 + 8;
+            i_ps += KC_STEP;
             break;
-        case PS_9:
-            res = res*10 + 9;
-            i_ps += PS_STEP;
+        case KC_9:
+            res = res*16 + 9;
+            i_ps += KC_STEP;
             break;
-        case PS_A:
-            res = res*10 + 10;
-            i_ps += PS_STEP;
+        case KC_A:
+            res = res*16 + 10;
+            i_ps += KC_STEP;
             break;
-        case PS_B:
+        case KC_B:
             res = res*10 + 11;
-            i_ps += PS_STEP;
+            i_ps += KC_STEP;
             break;
-        case PS_C:
-            res = res*10 + 12;
-            i_ps += PS_STEP;
+        case KC_C:
+            res = res*16 + 12;
+            i_ps += KC_STEP;
             break;
-        case PS_D:
-            res = res*10 + 13;
-            i_ps += PS_STEP;
+        case KC_D:
+            res = res*16 + 13;
+            i_ps += KC_STEP;
             break;
-        case PS_E:
-            res = res*10 + 14;
-            i_ps += PS_STEP;
+        case KC_E:
+            res = res*16 + 14;
+            i_ps += KC_STEP;
             break;
-        case PS_F:
-            res = res*10 + 15;
-            i_ps += PS_STEP;
+        case KC_F:
+            res = res*16 + 15;
+            i_ps += KC_STEP;
             break;
-        case PS_EN:
-            goto calc;
+        case KC_EN:
+			need_calc = true;
             break;
+		case KC_UP:
+			is_up = true;
+			break;
         default:
-            hex_ptr->hex0 = 0xE4404;
-            break;
+            hex_ptr->hex0 = 0xE;
+			hex_ptr->hex1 = 0x4;
+			hex_ptr->hex2 = 0x4;
+			hex_ptr->hex3 = 0x0;
+			hex_ptr->hex4 = 0x4;
+            return;
     }
+
+	hex_ptr->hex0 = res % 16;
+	hex_ptr->hex1 = res / 16;
+	hex_ptr->hex2 = res / (16*16);
+	hex_ptr->hex3 = res / (16*16*16);
+	hex_ptr->hex4 = res / (16*16*16*16);
+
+	if (need_calc)
+		goto calc;
 
     return;
 
@@ -124,10 +148,20 @@ calc:
     while (i != res && i != 0)
         i <<= 1;
     
-    if (i == res)
-        hex_ptr->hex0 = 1;
-    else
-        hex_ptr->hex0 = 0;
+	if (i == res && i != 0) {
+		hex_ptr->hex0 = 0x1;
+		hex_ptr->hex1 = 0x0;
+		hex_ptr->hex2 = 0x5;
+		hex_ptr->hex3 = 0xe;
+		hex_ptr->hex4 = 0x4;
+	} 
+	else {
+		hex_ptr->hex0 = 0x0;
+		hex_ptr->hex1 = 0x0;
+		hex_ptr->hex2 = 0x5;
+		hex_ptr->hex3 = 0xe;
+		hex_ptr->hex4 = 0x4;
+	}
 
     res = 0;
     i_ps = 0;
